@@ -36,13 +36,13 @@ EditorModule.GetMenuExtensibilityManager()->AddExtender(MenuExtender);
 FLevelEditorModule& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>("LevelEditor");
 ```
 
-#### FLevelEditorModule
+#### FDataTableEditorModule
 
 ```cpp
 FDataTableEditorModule& DataTableEditorModule = FModuleManager::LoadModuleChecked<FDataTableEditorModule>("DataTableEditor");
 ```
 
-#### FLevelEditorModule
+#### FBlueprintEditorModule
 
 ```cpp
 FBlueprintEditorModule& BlueprintEditorModule = FModuleManager::LoadModuleChecked<FBlueprintEditorModule>("BlueprintEditor");
