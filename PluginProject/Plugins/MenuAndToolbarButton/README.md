@@ -1,86 +1,94 @@
-# UltimateSkill
-ue4 plugin demo of note (http://hulefei.github.io/2021/03/20/ue4-plugin-custom-asset/)
+# 添加菜单和工具栏
 
-## UE4 右键添加菜单
+> UE4 Plugin 添加菜单和工具栏有两种方式：FExtender方式 和 UToolMenus方式
 
-### UE4 Plugin流程
+## FExtender方式
 
-1. IModuleInterface.StartupModule
-
-模块入口
-
-2. IAssetTools 
-
-获取IAssetTools将IAssetTypeActions接口实现的类注册
+### 添加工具栏
 
 ```cpp
-IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
+TSharedPtr<FExtender> MenuExtender = MakeShareable(new FExtender);
+MenuExtender->AddToolBarExtension(ExtensionHook, EExtensionHook::After, PluginCommands,
+//在AddDataTableEditorToolBarExtension 中设置SectionName
+FToolBarExtensionDelegate::CreateRaw(this, &FMenuAndToolbarButtonModule::AddToolBarExtension));
+EditorModule.GetToolBarExtensibilityManager()->AddExtender(MenuExtender);
 ```
-
-3. IAssetTypeActions
-
-* 将IAssetTypeActions接口实现的类注册入IAssetTools
+### 添加在已有菜单
 
 ```cpp
-RegisterAssetTypeAction(AssetTools, MakeShareable(new FUltimateSkillAssetActions()));
+TSharedPtr<FExtender> MenuExtender = MakeShareable(new FExtender);
+MenuExtender->AddMenuExtension(ExtensionHook, EExtensionHook::After, PluginCommands, FMenuExtensionDelegate::CreateRaw(this, &FMenuAndToolbarButtonModule::AddMenuExtension));
+EditorModule.GetMenuExtensibilityManager()->AddExtender(MenuExtender);
 ```
-
-* 将IAssetTypeActions接口从IAssetTools中注销
+### 添加在菜单栏
 
 ```cpp
-AssetTools.UnregisterAssetTypeActions(Action);
+TSharedPtr<FExtender> MenuExtender = MakeShareable(new FExtender);
+MenuExtender->AddMenuBarExtension(ExtensionHook, EExtensionHook::After, PluginCommands, FMenuBarExtensionDelegate::CreateRaw(this, &FMenuAndToolbarButtonModule::AddMenuBarExtension));
+EditorModule.GetMenuExtensibilityManager()->AddExtender(MenuExtender);
 ```
 
-4. ShutdownModule
+### EditorModule
 
-模块结束
-
-### 核心类
-
-#### FAssetTypeActions_Base
-
-1. 继承于 [IAssetTypeActions](https://docs.unrealengine.com/en-US/API/Developer/AssetTools/IAssetTypeActions/index.html)(提供asset支持的action和信息)
-2. 提供IAssetTypeActions接口的默认实现
-
-#### UFactory
-
-1. 提供创建和导入新资源的方法
-2. 有默认实现
-
-### 自定义类
-
-#### FUltimateSkillAssetActions
-
-1. 继承 FAssetTypeActions_Base
-2. 实现方法
+#### FLevelEditorModule
 
 ```cpp
-//右键item的分类
-virtual uint32 GetCategories() override;
-//item 名字
-virtual FText GetName() const override;
-//右键创建的在内存中创建的资源类类型
-virtual UClass* GetSupportedClass() const override;
-//资源的颜色
-virtual FColor GetTypeColor() const override;
-/*
- * 	点击item的调用
- *	@param InObjects 选中的对象，因为可以同时选择多个资源，所以是数组,使用GetTypedWeakObjectPtrs<UUltimateSkillAsset>转换资源
- *	@param MenuBuilder 构建menu，将item添加的到menu中
- */
-
-virtual void GetActions(const TArray<UObject*>& InObjects, FMenuBuilder& MenuBuilder) override;
-//是否显示item
-virtual bool HasActions(const TArray<UObject*>& InObjects) const override;
+FLevelEditorModule& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>("LevelEditor");
 ```
 
+#### FLevelEditorModule
+
+```cpp
+FDataTableEditorModule& DataTableEditorModule = FModuleManager::LoadModuleChecked<FDataTableEditorModule>("DataTableEditor");
+```
+
+#### FLevelEditorModule
+
+```cpp
+FBlueprintEditorModule& BlueprintEditorModule = FModuleManager::LoadModuleChecked<FBlueprintEditorModule>("BlueprintEditor");
+```
+
+## UToolMenus方式
+
+### 添加菜单
+
+```cpp
+UToolMenu* ToolMenu = UToolMenus::Get()->ExtendMenu(InName);
+{
+	FToolMenuSection& Section = ToolMenu->FindOrAddSection(SectionName);
+	Section.AddMenuEntryWithCommandList(FMenuAndToolbarButtonCommands::Get().PluginAction, PluginCommands);
+}
+```
+
+### 添加工具栏
+
+```cpp
+UToolMenu* ToolMenu = UToolMenus::Get()->ExtendMenu(InName);
+{
+	//添加工具栏
+	FToolMenuEntry& Entry = Section.AddEntry(FToolMenuEntry::InitToolBarButton(FMenuAndToolbarButtonCommands::Get().PluginAction));
+	Entry.SetCommandList(PluginCommands);
+
+}
+```
+
+### InName
+
+#### LevelEditor
+
+* LevelEditor.LevelEditorToolBar
+* LevelEditor.MainMenu
+
+#### AssetEditor
+
+* AssetEditor.BlueprintEditor.ToolBar
+* AssetEditor.BlueprintEditor.MainMenu
+* AssetEditor.DataTableEditor.ToolBar
+* AssetEditor.DataTableEditor.MainMenu
+
+...
 
 
-3. 创建的Asset一直在内存中，直到点击Content后，资源才会使用UFactory序列换到本地
+## 代码
 
-#### UUltimateSkillFactoryNew
-
-1. 继承 UFactory
-2. 在点击Content后，序列号内存中定义的资源
-
-
+https://github.com/hulefei/ue4-plugins/tree/main/PluginProject/Plugins/MenuAndToolbarButton
